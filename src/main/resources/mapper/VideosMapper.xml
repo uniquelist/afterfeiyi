@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper     PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.feiyi.dao.VideosDao">
+    <resultMap type="com.feiyi.domain.Videos" id="videoMap">
+        <id property="id" column="id" />
+        <result property="title" column="title" />
+        <result property="description" column="description" />
+        <result property="url" column="url" />
+        <result property="createdby_id" column="createdby_id" />
+        <result property="created_date" column="created_date" />
+        <result property="status" column="status" />
+
+        <collection  property="users"  ofType="com.feiyi.domain.User">
+            <id property="id" column="uid" />
+            <result property="username" column="username" />
+            <result property="password" column="password" />
+            <result property="email" column="email" />
+            <result property="phonenumber" column="phonenumber" />
+            <result property="sex" column="sex" />
+            <result property="created_date" column="ucreated_date" />
+            <result property="final_date" column="final_date" />
+            <result property="roleId" column="roleId" />
+            <result property="status" column="ustatus" />
+            <result property="birthday" column="birthday" />
+        </collection>
+    </resultMap>
+
+    <!--    查询已经被审核过的-->
+    <select id="findAll" resultMap="videoMap" >
+        select v.*,
+        u.id uid,u.username username,u.password password,u.email email,u.phonenumber phonenumber,
+        u.sex sex,u.created_date ucreated_date,u.final_date final_date,u.roleId roleId,u.status ustatus,
+        u.birthday birthday
+        from videos v
+        left join user u on v.createdby_id=u.id
+        where v.status=1 or v.status=-1
+        order by year(v.created_date) desc
+    </select>
+
+<!--    查询没有被拉黑-->
+    <select id="findVideoByStatus" resultMap="videoMap" >
+        select v.*,
+        u.id uid,u.username username,u.password password,u.email email,u.phonenumber phonenumber,
+        u.sex sex,u.created_date ucreated_date,u.final_date final_date,u.roleId roleId,u.status ustatus,
+        u.birthday birthday
+        from videos v
+        left join user u on v.createdby_id=u.id
+        where v.status=1
+        order by v.created_date desc
+    </select>
+    <!--    查询没有被审核过的-->
+    <select id="findAll0" resultMap="videoMap" >
+        select v.*,
+        u.id uid,u.username username,u.password password,u.email email,u.phonenumber phonenumber,
+        u.sex sex,u.created_date ucreated_date,u.final_date final_date,u.roleId roleId,u.status ustatus,
+        u.birthday birthday
+        from videos v
+        left join user u on v.createdby_id=u.id
+        where v.status=0
+        order by year(v.created_date) desc
+    </select>
+
+    <!--    根据ID查找-->
+    <select id="findAllById" resultType="com.feiyi.domain.Videos" >
+        select v.*,u.username username
+        from videos v
+        left join user u on v.createdby_id=u.id
+        where v.id = #{id}
+    </select>
+
+    <!--根据title查询-->
+    <select id="findByTitle" resultType="com.feiyi.domain.Videos" >
+        select v.*,u.username username
+        from videos v
+        left join user u on v.createdby_id=u.id
+        where v.title LIKE CONCAT('%',#{title},'%')
+    </select>
+
+    <!--    添加照片-->
+    <insert id="addVideo" parameterType="Videos">
+        insert into
+        videos (title,description,url,createdby_id,created_date,status)
+        values (#{title},#{description},#{url},#{createdby_id},#{created_date},#{status})
+        <selectKey resultType="Integer" order="AFTER" keyProperty="id">
+            SELECT LAST_INSERT_ID() AS id
+        </selectKey>
+    </insert>
+
+    <!--    修改影音状态-->
+    <update id="updateVideo" parameterType="Videos">
+        update videos set
+            status=#{status}
+        where
+            id =#{id}
+    </update>
+
+    <!--    删除照片-->
+    <delete id="deleteById" >
+        delete from videos where id = #{id}
+    </delete>
+
+    <!--    统计视频数量-->
+    <select id="countVedio" resultType="java.lang.Integer">
+        select count(*)
+        from videos
+        where status = 0
+    </select>
+
+    <!--    统计进六年作品上传数量-->
+    <select id="countVideosByYear" resultType="com.feiyi.domain.CountImageAndVideoByYear">
+        SELECT
+          YEAR(created_date) AS year,
+          COUNT(*) AS countVideos
+        FROM
+          videos
+        WHERE
+          created_date >= DATE_SUB(NOW(), INTERVAL 5 YEAR)
+        GROUP BY
+          year
+        UNION ALL
+        SELECT
+          years.year,
+          0 AS count
+        FROM
+          (SELECT YEAR(NOW()) AS year
+           UNION SELECT YEAR(DATE_SUB(NOW(), INTERVAL 1 YEAR))
+           UNION SELECT YEAR(DATE_SUB(NOW(), INTERVAL 2 YEAR))
+           UNION SELECT YEAR(DATE_SUB(NOW(), INTERVAL 3 YEAR))
+           UNION SELECT YEAR(DATE_SUB(NOW(), INTERVAL 4 YEAR))
+           UNION SELECT YEAR(DATE_SUB(NOW(), INTERVAL 5 YEAR))) AS years
+        LEFT JOIN
+          (SELECT YEAR(created_date) AS year
+           FROM videos
+           WHERE created_date >= DATE_SUB(NOW(), INTERVAL 5 YEAR)
+           GROUP BY `year`) AS counted_years
+        ON years.year = counted_years.year
+        WHERE counted_years.year IS NULL
+        ORDER BY year ASC;
+    </select>
+</mapper>
