@@ -116,7 +116,7 @@
         FROM
           videos
         WHERE
-          created_date >= DATE_SUB(NOW(), INTERVAL 5 YEAR)
+          year(created_date) >= year(DATE_SUB(NOW(), INTERVAL 5 YEAR))
         GROUP BY
           year
         UNION ALL
@@ -133,7 +133,7 @@
         LEFT JOIN
           (SELECT YEAR(created_date) AS year
            FROM videos
-           WHERE created_date >= DATE_SUB(NOW(), INTERVAL 5 YEAR)
+           WHERE year(created_date) >= year(DATE_SUB(NOW(), INTERVAL 5 YEAR))
            GROUP BY `year`) AS counted_years
         ON years.year = counted_years.year
         WHERE counted_years.year IS NULL
